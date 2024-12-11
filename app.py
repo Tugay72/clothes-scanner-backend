@@ -10,6 +10,7 @@ import time
 from io import BytesIO
 from PIL import Image
 
+
 base_color_mapping = {
     "red": "red",
     "orange": "orange",
