@@ -1,14 +1,14 @@
-from flask import Flask, request, jsonify, send_file
-import cv2
-import tensorflow as tf
+from flask import Flask, request, jsonify, send_file # type: ignore
+import cv2 # type: ignore
+import tensorflow as tf # type: ignore
 from tensorflow.keras.preprocessing.image import load_img, img_to_array  # type: ignore
-import numpy as np
+import numpy as np # type: ignore
 import os
 from math import sqrt
-from colornamer import get_color_from_rgb
+from colornamer import get_color_from_rgb # type: ignore
 import time
 from io import BytesIO
-from PIL import Image
+from PIL import Image # type: ignore
 
 
 base_color_mapping = {
@@ -198,4 +198,5 @@ def get_processed_image():
         return jsonify({'error': 'Processed image not found'}), 404
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
