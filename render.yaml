@@ -1,0 +1,4 @@
+web:
+  command: gunicorn app:app
+  env:
+    - PORT=5000
