@@ -57,6 +57,8 @@ base_color_mapping = {
 
 
 app = Flask(__name__)
+app.debug = False
+
 
 PROCESSED_IMAGE_DIR = 'images'
 os.makedirs(PROCESSED_IMAGE_DIR, exist_ok=True)
@@ -93,13 +95,14 @@ def get_closest_color_name(rgb_color):
 
 
 def predict_pattern(pil_image):
-    # Convert PIL Image to NumPy array and preprocess for the model
-    img_array = np.array(pil_image.resize((128, 128))) / 255.0
+    # Resize the image for model prediction
+    img_array = np.array(pil_image.resize((128, 128))) / 255.0  # Resize image to 128x128
     img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
     predictions = model.predict(img_array)  # Model prediction
     predicted_class = classes[np.argmax(predictions)]  # Predicted class
     confidence = np.max(predictions) * 100  # Confidence score
     return predicted_class, confidence
+
 
 
 @app.route('/process-image', methods=['POST'])
@@ -112,6 +115,7 @@ def process_image_route():
     # Read the image directly from memory
     image_bytes = BytesIO(image_file.read())
     pil_image = Image.open(image_bytes).convert("RGB")
+    pil_image = pil_image.resize((256, 256))
     
     # Convert PIL image to numpy array for OpenCV processing
     img_rgb = np.array(pil_image)
@@ -121,7 +125,7 @@ def process_image_route():
 
     # K-Means Clustering to find the dominant color
     pixels = img_resized.reshape(-1, 3)
-    k = 5  # Number of clusters
+    k = 3  # Number of clusters
     _, labels, centers = cv2.kmeans(
         pixels.astype(np.float32), k, None, 
         (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0), 
