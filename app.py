@@ -38,17 +38,17 @@ base_color_mapping = {
     "firebrick": "red",
     "medium orchid": "purple",
     "dark sea green": "green",
-    "green blue": "blue",
+    "green blue": "green",
     "violet blue": "purple",
     "yellow green": "yellow",
-    "olive": "black",
+    "olive": "green",
     "sienna": "brown",
     "yellow orange": "yellow",
     "orange yellow": "orange",
     "blue green": "blue",
     "red orange": "red",
     "green yellow": "green",
-    "violet red": "red",
+    "violet red": "purple",
     "grey": "gray",
     "blue violet": "purple",
     "orange red": "orange",
@@ -114,36 +114,76 @@ def process_image_route():
         return jsonify({'error': 'No image file provided'}), 400
 
     image_file = request.files['image']
+    
+    # Read the image directly from memory
     image_bytes = BytesIO(image_file.read())
     pil_image = Image.open(image_bytes).convert("RGB")
+    
+    # Convert PIL image to numpy array for OpenCV processing
     img_rgb = np.array(pil_image)
-
+    
+    # Resize for K-Means clustering
     img_resized = cv2.resize(img_rgb, (480, 640))
+
+    # K-Means Clustering to find the dominant color
     pixels = img_resized.reshape(-1, 3)
-    k = 5
+    k = 5  # Number of clusters
     _, labels, centers = cv2.kmeans(
-        pixels.astype(np.float32), k, None,
-        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0),
+        pixels.astype(np.float32), k, None, 
+        (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0), 
         10, cv2.KMEANS_RANDOM_CENTERS
     )
 
+    # Get the first dominant color (most frequent cluster center)
+    dominant_color = centers[np.argmax(np.bincount(labels.flatten()))]
+    dominant_color_name = get_closest_color_name(tuple(dominant_color.astype(int)))
+
+    # Get the second dominant color (second most frequent cluster center)
+
+    # Sort the cluster centers by frequency
     color_counts = np.bincount(labels.flatten())
-    sorted_indices = np.argsort(color_counts)[::-1]
-    dominant_colors = [centers[i] for i in sorted_indices[:3]]
-    dominant_color_names = [get_closest_color_name(tuple(color.astype(int))) for color in dominant_colors]
+    sorted_indices = np.argsort(color_counts)[::-1]  # Sort descending by frequency
+    second_dominant_color = centers[sorted_indices[1]]  # Second most frequent color
+    second_dominant_color_name = get_closest_color_name(tuple(second_dominant_color.astype(int)))
 
+    third_dominant_color = centers[sorted_indices[2]]  # Third most frequent color
+    third_dominant_color_name = get_closest_color_name(tuple(third_dominant_color.astype(int)))
+
+    # Average color of the cropped center
+    h, w, _ = img_rgb.shape
+    center_x, center_y = w // 2, h // 2
+    size = 100
+    cropped_center = img_rgb[center_y - size // 2:center_y + size // 2,
+                             center_x - size // 2:center_x + size // 2]
+    average_color = cropped_center.mean(axis=(0, 1)).astype(int)
+    average_color_name = get_closest_color_name(tuple(average_color))
+
+    # Run pattern recognition on the uploaded image
     pattern, confidence = predict_pattern(pil_image)
-    print(f"Pattern: {pattern}, Confidence: {confidence:.2f}%")
 
-    dominant_colors_list = list(dict.fromkeys(dominant_color_names))
+    dominant_colors_list = []
+    if pattern == 'solid':
+        dominant_colors_list.append(dominant_color_name)
+    elif pattern == 'floral':
+        dominant_colors_list.extend([dominant_color_name, second_dominant_color_name, third_dominant_color_name])
+    else:
+        if dominant_color_name == second_dominant_color_name:
+            dominant_colors_list.extend([dominant_color_name, third_dominant_color_name])
+        else:
+            dominant_colors_list.extend([dominant_color_name, second_dominant_color_name])
+
+    dominant_colors_list = list(dict.fromkeys(dominant_colors_list))
     str_dominant_colors_list = ", ".join(dominant_colors_list)
 
+    # Return the result
     return jsonify({
-        'dominant_colors': dominant_colors_list,
+        'dominant_color': dominant_color.tolist(),
+        'dominant_color_name': str_dominant_colors_list,
+        'average_color': average_color.tolist(),
+        'average_color_name': average_color_name,
         'pattern': pattern,
         'pattern_confidence': f"{confidence:.2f}%"
     })
-
 
 if __name__ == '__main__':
     print("Starting Flask server...")
