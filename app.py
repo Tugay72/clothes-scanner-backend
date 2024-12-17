@@ -10,7 +10,6 @@ from colornamer import get_color_from_rgb # type: ignore
 import time
 from io import BytesIO
 from PIL import Image # type: ignore
-from memory_profiler import profile # type: ignore
 
 base_color_mapping = {
     "red": "red",
