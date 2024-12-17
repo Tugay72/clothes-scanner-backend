@@ -1,7 +1,6 @@
 import threading
 from flask import Flask, request, jsonify, send_file # type: ignore
 import cv2 # type: ignore
-import psutil # type: ignore
 import tensorflow as tf # type: ignore
 from tensorflow.keras.preprocessing.image import load_img, img_to_array  # type: ignore
 import numpy as np # type: ignore
@@ -81,21 +80,6 @@ classes = ['checkered', 'dotted', 'floral', 'solid', 'striped', 'zigzag']
 def home():
     return 'Welcome!'
 
-def print_memory_usage():
-    process = psutil.Process()
-    while True:
-        mem_info = process.memory_info()
-        memory_usage_mb = mem_info.rss / (1024 * 1024)  # Convert to MB
-        print(f"Memory Usage: {memory_usage_mb:.2f} MB")
-        time.sleep(2)
-
-@app.route('/memory-usage', methods=['GET'])
-def memory_usage():
-    process = psutil.Process()
-    mem_info = process.memory_info()  # Memory info of the current process
-    memory_usage_mb = mem_info.rss / (1024 * 1024)  # Convert to MB (Resident Set Size)
-    return jsonify({"memory_usage_mb": memory_usage_mb})
-
 def get_closest_color_name(rgb_color):
     if all(value <= 60 for value in rgb_color):
         return "black"
@@ -163,6 +147,5 @@ def process_image_route():
 
 
 if __name__ == '__main__':
-    threading.Thread(target=print_memory_usage, daemon=True).start()
     print("Starting Flask server...")
     app.run(host='0.0.0.0', port=5000, debug=False)
